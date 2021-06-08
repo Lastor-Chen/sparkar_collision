@@ -1,0 +1,9 @@
+# VScode config
+.vscode/
+
+# SparkAR auto files
+tsconfig.json
+*.arprojbk
+
+# Windows thumbnail cache files
+Thumbs.db

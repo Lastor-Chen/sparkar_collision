@@ -14,10 +14,10 @@ export const tool = {
       obj.transform.y
 
     // Get the half size
-    let halfSizeX: ScalarSignal = parent ?
+    const halfSizeX: ScalarSignal = parent ?
       obj.width.mul(obj.transform.scale.x).mul(parent.transform.scale.x).div(2) :
       obj.width.mul(obj.transform.scale.x).div(2)
-    let halfSizeY: ScalarSignal = parent ?
+    const halfSizeY: ScalarSignal = parent ?
       obj.height.mul(obj.transform.scale.y).mul(parent.transform.scale.y).div(2) :
       obj.height.mul(obj.transform.scale.y).div(2)
 
@@ -46,6 +46,8 @@ export const tool = {
       top: posY.add(halfSizeY),
       right: posX.add(halfSizeX),
       bottom: posY.sub(halfSizeY),
+      halfSizeX: halfSizeX,
+      halfSizeY: halfSizeY,
     }
   },
 

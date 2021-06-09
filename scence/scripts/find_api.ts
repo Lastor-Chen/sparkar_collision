@@ -7,6 +7,7 @@ export async function queryAsset() {
   // @ts-ignore
   const assets = await Promise.all([
     Scene.root.findFirst('user'),
+    Scene.root.findFirst('userCircle'),
     Scene.root.findFirst('AABB_plane'),
     Scene.root.findFirst('leftRight_plane'),
     Scene.root.findFirst('leftRight_trapezium'),
@@ -24,6 +25,7 @@ export async function queryAsset() {
   // rename assets
   const names = [
     'user',
+    'userCircle',
     'AABB_plane',
     'leftRight_plane',
     'leftRight_trapezium',

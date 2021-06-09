@@ -9,16 +9,18 @@ import { runGJK } from './gjk'
 (async function () {
   const asset = await queryAsset()
 
-  // 軸對稱包圍盒 (Axis-Aligned Bounding Box), 無旋轉矩形
+  // 矩形-矩形, 軸對稱包圍盒 (Axis-Aligned Bounding Box), 無旋轉
   // runAABB(asset)
 
-  // AABB 強化版, 左右側判定法, 可旋轉
+  // 矩形-矩形, 左右側判定法, 可旋轉
   // runLeftRight(asset)
 
   // 直線式道路, 連續線段判定, 左右側法
-  runMultiLines(asset)
+  // runMultiLines(asset)
 
-  // runCircle(asset)
+  // 圓形-圓形 or 圓形-矩形, 半徑法
+  runCircle(asset)
+
   // runGJK(asset)
 })();
 

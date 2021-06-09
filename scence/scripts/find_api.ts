@@ -15,9 +15,9 @@ export async function queryAsset() {
     Scene.root.findByPath('**/multiLines/*/*/vertex*'),
     Scene.root.findFirst('circle'),
     Scene.root.findFirst('circleS'),
-    Scene.root.findFirst('gjk_plane'),
-    Scene.root.findFirst('trapezium'),
-    Scene.root.findByPath('**/GJK/trapezium/rect0/vertex*'),
+    Scene.root.findFirst('gjk_trapezium'),
+    Scene.root.findByPath('**/GJK/gjk_trapezium/rect0/vertex*'),
+    Scene.root.findFirst('gjk_status'),
     Materials.findFirst('circle'),
     Materials.findFirst('collider'),
   ])
@@ -33,9 +33,9 @@ export async function queryAsset() {
     'multiLines_vertices',
     'circle',
     'circleS',
-    'gjk_plane',
     'gjk_trapezium',
     'gjk_vertices',
+    'gjk_status',
     'circleMat',
     'colliderMat',
   ]

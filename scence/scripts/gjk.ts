@@ -7,41 +7,38 @@ import Time from 'Time'
 // https://bwaynesu.wordpress.com/2018/09/10/gjk-collision-detection/?fbclid=IwAR3YCVEgsuRLhdYKgg3n2WUBfaKvZL2rXZuvFpHD4gJhaf4xOUOKJZcdphY
 
 /**
- * 失敗, 還不可用
- * - 凸四邊形碰撞判定不準確, 不確定是否是算法寫錯
+ * 不適用 sparkAR
  * - 需要用 setInterval 處理, 用響應式 API 寫不出來
  * - 遍歷找 simplex 運算成本似乎很高, sparkAR 跑一陣子會崩潰
+ * - 如全改成 pinLastValue 的方式, 效能應該會高些
  */
-export function runGJK(asset) {
+export async function runGJK(asset) {
+  const status = asset.gjk_status as PlanarText
   const user = asset.user as Plane
-  const userBBox = tool.genBoundingBox3DWithRotation(user)
-  const colliderMat = asset.colliderMat as DefaultMaterial
-  colliderMat.opacity = Reactive.val(0.3)
+  const userBBox = tool.getBBox3D(user)
 
-  // 矩形
-  const plane = asset.gjk_plane as Plane
-  const planeBBox = tool.genBoundingBox3DWithRotation(plane)
+  const colliderMat = asset.colliderMat as DefaultMaterial
+  colliderMat.opacity = Reactive.val(1)
 
   // 凸四邊形
   const trapezium = asset.gjk_trapezium as Trapezium
-  const vertices = asset.gjk_vertices as SceneObject[]
+  const vertices = await trapezium.findByPath('rect0/vertex*')
+
+  // 計算父層 position, scale
   trapezium.vertices = vertices.map(vertex =>
     vertex.transform.position.mul(trapezium.transform.scale).add(trapezium.transform.position)
   )
   trapezium.pivot = trapezium.transform.position
 
-  const fps = 6
   Time.setInterval(() => {
-    const isHit = checkGJK(userBBox, trapezium, true)
-    if (isHit) {
-      colliderMat.opacity = Reactive.val(1)
-    } else {
-      colliderMat.opacity = Reactive.val(0.3)
-    }
-  }, 1000 / fps)
+    const isHit = checkGJK(userBBox, trapezium)
+
+    // 變材質球會當掉, 改用文字顯示
+    status.text = isHit ? Reactive.val('true') : Reactive.val('false')
+  }, 1000)
 }
 
-function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium, isTrapezium: boolean = false) {
+function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium) {
   const vertices: PointSignal[] = []
   let direction: PointSignal = null
   while (true) {
@@ -95,52 +92,20 @@ function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium, isTr
   }
 
   function addSupportPoint(direction: PointSignal) {
-    let sp: PointSignal = null
     const directionNeg = direction.neg() as unknown as PointSignal
 
-    if (isTrapezium) {
-      const shape = shapeB as Trapezium
-      sp = getSupportPoint(shapeA, direction).sub(getSupportPoint2(shape, directionNeg))
-      vertices.push(sp)
-    } else {
-      const shape = shapeB as BoundingBox3D
-      sp = getSupportPoint(shapeA, direction).sub(getSupportPoint(shape, directionNeg))
-      vertices.push(sp)
-    }
+    const sp = getSupportPoint(shapeA, direction).sub(getSupportPoint(shapeB, directionNeg))
+    vertices.push(sp)
 
     return direction.dot(sp).pinLastValue() >= 0
   }
 }
 
-/** for BBox3D, 求 shape 在在方向上最遠的 point */
-function getSupportPoint(shape: BoundingBox3D, direction: PointSignal): PointSignal {
+/** 求 shape 在在方向上最遠的 point */
+function getSupportPoint(shape: BoundingBox3D | Trapezium, direction: PointSignal): PointSignal {
   // 用負無限大, 因下方比大小時, distance 有可能負數
   let furthestDistance = -Infinity
-  let furthestPoint = null
-  const vertices = [
-    shape.pointLT,
-    shape.pointRT,
-    shape.pointRB,
-    shape.pointLB,
-  ]
-
-  vertices.forEach(point => {
-    const distance = point.dot(direction).pinLastValue()
-
-    if (distance > furthestDistance) {
-      furthestDistance = distance
-      furthestPoint = point
-    }
-  })
-
-  return furthestPoint
-}
-
-/** for Trapezium, 求 shape 在在方向上最遠的 point */
-function getSupportPoint2(shape: Trapezium, direction: PointSignal): PointSignal {
-  // 用負無限大, 因下方比大小時, distance 有可能負數
-  let furthestDistance = -Infinity
-  let furthestPoint = null
+  let furthestPoint: PointSignal = null
 
   shape.vertices.forEach(point => {
     const distance = point.dot(direction).pinLastValue()

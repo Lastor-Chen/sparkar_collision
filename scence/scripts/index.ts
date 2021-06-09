@@ -10,7 +10,7 @@ import { runGJK } from './gjk'
   const asset = await queryAsset()
 
   // 矩形-矩形, 軸對稱包圍盒 (Axis-Aligned Bounding Box), 無旋轉
-  // runAABB(asset)
+  runAABB(asset)
 
   // 矩形-矩形, 左右側判定法, 可旋轉
   // runLeftRight(asset)
@@ -19,8 +19,9 @@ import { runGJK } from './gjk'
   // runMultiLines(asset)
 
   // 圓形-圓形 or 圓形-矩形, 半徑法
-  runCircle(asset)
+  // runCircle(asset)
 
+  // 凸多邊形, GJK 演算法, 運算成本過高, 會當掉
   // runGJK(asset)
 })();
 

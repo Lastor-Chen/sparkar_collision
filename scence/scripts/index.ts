@@ -2,8 +2,8 @@
 import { queryAsset } from './find_api'
 import { runAABB } from './aabb'
 import { runLeftRight } from './left_right'
-import { runCircle } from './circle'
 import { runMultiLines } from './multi_lines'
+import { runCircle } from './circle'
 import { runGJK } from './gjk'
 
 (async function () {
@@ -13,10 +13,12 @@ import { runGJK } from './gjk'
   // runAABB(asset)
 
   // AABB 強化版, 左右側判定法, 可旋轉
-  runLeftRight(asset)
+  // runLeftRight(asset)
+
+  // 直線式道路, 連續線段判定, 左右側法
+  runMultiLines(asset)
 
   // runCircle(asset)
-  // runMultiLines(asset)
   // runGJK(asset)
 })();
 

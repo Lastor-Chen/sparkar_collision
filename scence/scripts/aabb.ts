@@ -53,34 +53,13 @@ function getBBox3D(obj: Plane, parent?: SceneObjectBase): BoundingBox3D {
   }
 }
 
-/** Collision detection via rectangle overlap */
-function checkHit3D(collider: BoundingBox3D, role: BoundingBox3D) {
-  const itemTop = collider.top
-  const itemBtm = collider.bottom
-  const itemLeft = collider.left
-  const itemRight = collider.right
-  const roleTop = role.top
-  const roleBtm = role.bottom
-  const roleLeft = role.left
-  const roleRight = role.right
+/** 碰撞偵測, 對稱軸包圍盒 */
+function checkHit3D(rectA: BoundingBox3D, rectB: BoundingBox3D) {
+  // X軸碰撞, A.right > B.left && B.right > A.left
+  const xIn = rectA.right.gt(rectB.left).and(rectB.right.gt(rectA.left))
 
-  // X軸碰撞, 檢查是否交疊
-  // (itemLeft < roleLeft < itemRight) || (itemLeft < roleRight < itemRight)
-  const roleLeftIn = itemLeft.lt(roleLeft).and(roleLeft.lt(itemRight))
-  const roleRightIn = itemLeft.lt(roleRight).and(roleRight.lt(itemRight))
-  // (roleLeft < itemLeft < roleRight) || (roleLeft < itemReft < roleRight)
-  const itemLeftIn = roleLeft.lt(itemLeft).and(itemLeft.lt(roleRight))
-  const itemRightIn = roleLeft.lt(itemRight).and(itemRight.lt(roleRight))
-  const xIn = roleLeftIn.or(roleRightIn).or(itemLeftIn).or(itemRightIn)
-
-  // Y軸碰撞, 檢查是否交疊
-  // (itemTop > roleTop > itemBtm) || (itemTop > roleBtm > itemBtm)
-  const roleTopIn = itemTop.gt(roleTop).and(roleTop.gt(itemBtm))
-  const roleBtmIn = itemTop.gt(roleBtm).and(roleBtm.gt(itemBtm))
-  // (roleTop > itemTop > roleBtm) || (roleTop > itemBtm > roleBtm)
-  const itemTopIn = roleTop.gt(itemTop).and(itemTop.gt(roleBtm))
-  const itemBtmIn = roleTop.gt(itemBtm).and(itemBtm.gt(roleBtm))
-  const yIn = roleTopIn.or(roleBtmIn).or(itemTopIn).or(itemBtmIn)
+  // Y軸碰撞, A.top > B.btm && B.top > A.btm
+  const yIn = rectA.top.gt(rectB.bottom).and(rectB.top.gt(rectA.bottom))
 
   return xIn.and(yIn)
 }

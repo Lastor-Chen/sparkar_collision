@@ -1,5 +1,7 @@
 /// <reference path="index.d.ts" />
 import { queryAsset } from './find_api'
+import { runAABB } from './aabb'
+import { runLeftRight } from './left_right'
 import { runCircle } from './circle'
 import { runMultiLines } from './multi_lines'
 import { runGJK } from './gjk'
@@ -7,9 +9,15 @@ import { runGJK } from './gjk'
 (async function () {
   const asset = await queryAsset()
 
-  // runMultiLines(asset)
+  // 軸對稱包圍盒 (Axis-Aligned Bounding Box), 無旋轉矩形
+  // runAABB(asset)
+
+  // AABB 強化版, 左右側判定法, 可旋轉
+  runLeftRight(asset)
+
   // runCircle(asset)
-  runGJK(asset)
+  // runMultiLines(asset)
+  // runGJK(asset)
 })();
 
 /**

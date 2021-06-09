@@ -7,6 +7,10 @@ export async function queryAsset() {
   // @ts-ignore
   const assets = await Promise.all([
     Scene.root.findFirst('user'),
+    Scene.root.findFirst('AABB_plane'),
+    Scene.root.findFirst('leftRight_plane'),
+    Scene.root.findFirst('leftRight_trapezium'),
+    Scene.root.findByPath('**/leftRight/leftRight_trapezium/rect0/vertex*'),
     Scene.root.findByPath('**/gameMap/vertices/vertex*'),
     Scene.root.findFirst('circle'),
     Scene.root.findFirst('circleS'),
@@ -20,6 +24,10 @@ export async function queryAsset() {
   // rename assets
   const names = [
     'user',
+    'AABB_plane',
+    'leftRight_plane',
+    'leftRight_trapezium',
+    'leftRight_vertices',
     'vertices',
     'circle',
     'circleS',

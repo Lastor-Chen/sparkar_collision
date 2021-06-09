@@ -10,10 +10,11 @@ interface BoundingBox3D {
   bottom: ScalarSignal,
   halfSizeX?: ScalarSignal,
   halfSizeY?: ScalarSignal,
+  vertices?: PointSignal[],
 }
 
 // GJK
 interface Trapezium extends ThreeDObject {
-  pivot: PointSignal,
-  vertices: PointSignal[],
+  pivot?: PointSignal,
+  vertices?: PointSignal[],
 }

@@ -5,7 +5,7 @@ export const tool = {
    * 對 3D 物件生成 z 恆為 0 的虛擬 Bounding Box
    * ```
    * config {
-   *   parent?: SceneObjectBase
+   *   parent?: SceneObjectBase - 父層無旋轉為前提
    *   useRotation?: boolean - default false
    * }
    * ```

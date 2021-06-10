@@ -19,6 +19,7 @@ export async function queryAsset() {
     Scene.root.findFirst('gjk_trapezium'),
     Scene.root.findByPath('**/GJK/gjk_trapezium/rect0/vertex*'),
     Scene.root.findFirst('gjk_status'),
+    Scene.root.findFirst('sat_plane'),
     Materials.findFirst('circle'),
     Materials.findFirst('collider'),
   ])
@@ -38,6 +39,7 @@ export async function queryAsset() {
     'gjk_trapezium',
     'gjk_vertices',
     'gjk_status',
+    'sat_plane',
     'circleMat',
     'colliderMat',
   ]

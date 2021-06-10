@@ -6,6 +6,7 @@ import { runLeftRight } from './left_right'
 import { runMultiLines } from './multi_lines'
 import { runCircle } from './circle'
 import { runGJK } from './gjk'
+import { runSAT } from './sat'
 
 (async function () {
   const asset = await queryAsset()
@@ -14,7 +15,7 @@ import { runGJK } from './gjk'
   // runAABB(asset)
 
   // 矩形碰撞 (可旋轉), 點包含法
-  runPointInRect(asset)
+  // runPointInRect(asset)
 
   // 凸四邊形碰撞 (可旋轉), 左右側判定法
   // runLeftRight(asset)
@@ -27,4 +28,7 @@ import { runGJK } from './gjk'
 
   // 凸多邊形, GJK 演算法, 運算成本過高, 會當掉
   // runGJK(asset)
+
+  // 凸多邊形, SAT 分離軸定律
+  runSAT(asset)
 })();

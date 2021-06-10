@@ -93,42 +93,11 @@ export const tool = {
 /** 其他未使用到的向量幾何函式 */
 export const other = {
   /**
-   * 點是否在矩形內(旋轉可), 內積法
-   * - source - https://math.stackexchange.com/questions/190111/how-to-check-if-a-point-is-inside-a-rectangle
-   */
-  pointInRectByDot(point: PointSignal, rect: BoundingBox3D) {
-    // rect(A,B,C,D) 點位順時針 vs point(P)
-    // 公式: (0 ≤ AP·AB ≤ AB·AB) and (0 ≤ AP·AD ≤ AD·AD)
-    const pointA = rect.vertices[0]
-    const pointB = rect.vertices[1]
-    const pointD = rect.vertices[3]
-    const vecAB = pointB.sub(pointA)
-    const vecAD = pointD.sub(pointA)
-    const vecAP = point.sub(pointA)
-
-    // 0 ≤ AP·AB && AP·AB ≤ AB·AB
-    const leftIn = vecAP.dot(vecAB).ge(0).and(vecAP.dot(vecAB).le(vecAB.dot(vecAB)))
-    // 0 ≤ AP·AD && AP·AD ≤ AD·AD
-    const rightIn = vecAP.dot(vecAD).ge(0).and(vecAP.dot(vecAD).le(vecAD.dot(vecAD)))
-    return leftIn.and(rightIn)
-  },
-
-  /** 點是否在矩形內(無旋轉), 傳統法 */
-  pointInRect(point: PointSignal, rectBBox: BoundingBox3D) {
-    // rectLeft <= pointX <= rectRight
-    const xIn = rectBBox.left.le(point.x).and(point.x.le(rectBBox.right))
-    // rectBottom <= pointY <= rectTop
-    const yIn = rectBBox.bottom.le(point.y).and(point.y.le(rectBBox.top))
-
-    return xIn.and(yIn)
-  },
-
-  /**
    * 線是否相交於圓, 外積
    * - source - https://mathworld.wolfram.com/Circle-LineIntersection.html
    */
   intersectLineCircle(pointA: PointSignal, pointB: PointSignal, circle: BoundingBox3D) {
-    const radius = circle.halfSizeX
+    const radius = circle.sizeX.div(2)
     // 兩點距離的平方
     const squaredDistance = pointB.sub(pointA).magnitudeSquared()
     // 外積, cross product
@@ -143,7 +112,7 @@ export const other = {
    * - source - https://gamedev.net/forums/topic/309663-2d-vector-intersection-with-circle-or-box/309663/
    */
   intersectVectorCircle(pointA: PointSignal, pointB: PointSignal, circle: BoundingBox3D) {
-    const radius = circle.halfSizeX
+    const radius = circle.sizeX.div(2)
     // pointC is circle center
     const vecAC = circle.pivot.sub(pointA)
     const vecAB = pointB.sub(pointA)

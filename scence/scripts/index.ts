@@ -1,6 +1,7 @@
 /// <reference path="index.d.ts" />
 import { queryAsset } from './find_api'
 import { runAABB } from './aabb'
+import { runPointInRect } from './point_in_rect'
 import { runLeftRight } from './left_right'
 import { runMultiLines } from './multi_lines'
 import { runCircle } from './circle'
@@ -9,13 +10,16 @@ import { runGJK } from './gjk'
 (async function () {
   const asset = await queryAsset()
 
-  // 矩形-矩形, 軸對稱包圍盒 (Axis-Aligned Bounding Box), 無旋轉
-  runAABB(asset)
+  // 矩形碰撞 (無旋轉), 軸對稱包圍盒 (Axis-Aligned Bounding Box)
+  // runAABB(asset)
 
-  // 矩形-矩形, 左右側判定法, 可旋轉
+  // 矩形碰撞 (可旋轉), 點包含法
+  runPointInRect(asset)
+
+  // 凸四邊形碰撞 (可旋轉), 左右側判定法
   // runLeftRight(asset)
 
-  // 直線式道路, 連續線段判定, 左右側法
+  // 直線式道路, 左右側法之連續線段判定
   // runMultiLines(asset)
 
   // 圓形-圓形 or 圓形-矩形, 半徑法

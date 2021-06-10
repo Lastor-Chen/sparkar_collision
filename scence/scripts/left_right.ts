@@ -36,11 +36,11 @@ export function runLeftRight(asset) {
 
 /** 碰撞偵測, 左右側法 */
 function checkHit3D(collider: BoundingBox3D | Trapezium, role: BoundingBox3D) {
-  // 順時針方向
-  const [pointA, pointB, pointC, pointD] = collider.vertices
-
-  let isInside: BoolSignal = null
+  let roleInCollider: BoolSignal = null
   role.vertices.forEach((point) => {
+    // 順時針方向
+    const [pointA, pointB, pointC, pointD] = collider.vertices
+
     const pointToLineAB = calcWhichSide(pointA, pointB, point).le(0)
     const pointToLineBC = calcWhichSide(pointB, pointC, point).le(0)
     const pointToLineCD = calcWhichSide(pointC, pointD, point).le(0)
@@ -48,10 +48,25 @@ function checkHit3D(collider: BoundingBox3D | Trapezium, role: BoundingBox3D) {
 
     const point_collider = pointToLineAB.and(pointToLineBC).and(pointToLineCD).and(pointToLineDA)
 
-    isInside = isInside ? isInside.or(point_collider) : point_collider
+    roleInCollider = roleInCollider ? roleInCollider.or(point_collider) : point_collider
   })
 
-  return isInside
+  let colliderInRole: BoolSignal = null
+  collider.vertices.forEach((point) => {
+    // 順時針方向
+    const [pointA, pointB, pointC, pointD] = role.vertices
+
+    const pointToLineAB = calcWhichSide(pointA, pointB, point).le(0)
+    const pointToLineBC = calcWhichSide(pointB, pointC, point).le(0)
+    const pointToLineCD = calcWhichSide(pointC, pointD, point).le(0)
+    const pointToLineDA = calcWhichSide(pointD, pointA, point).le(0)
+
+    const point_collider = pointToLineAB.and(pointToLineBC).and(pointToLineCD).and(pointToLineDA)
+
+    colliderInRole = colliderInRole ? colliderInRole.or(point_collider) : point_collider
+  })
+
+  return roleInCollider.or(colliderInRole)
 }
 
 /** 判斷 pointC 在 lineAB 的哪一側, 外積法 */

@@ -15,7 +15,7 @@ import Time from 'Time'
 export async function runGJK(asset) {
   const status = asset.gjk_status as PlanarText
   const user = asset.user as Plane
-  const userBBox = tool.getBBox3D(user)
+  const userBBox = tool.getBBox3d(user, { useRotation: true })
 
   const colliderMat = asset.colliderMat as DefaultMaterial
   colliderMat.opacity = Reactive.val(1)
@@ -30,12 +30,13 @@ export async function runGJK(asset) {
   )
   trapezium.pivot = trapezium.transform.position
 
+  const fps = 6
   Time.setInterval(() => {
     const isHit = checkGJK(userBBox, trapezium)
 
     // 變材質球會當掉, 改用文字顯示
     status.text = isHit ? Reactive.val('true') : Reactive.val('false')
-  }, 1000)
+  }, 1000 / fps)
 }
 
 function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium) {

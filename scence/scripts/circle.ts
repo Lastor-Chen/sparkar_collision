@@ -4,12 +4,12 @@ import { tool } from './tool'
 
 export function runCircle(asset) {
   const user = asset.user as Plane
-  const userBBox = tool.getBBox3D(user)
+  const userBBox = tool.getBBox3d(user, { useRotation: true })
 
   const circle = asset.circle as Plane
   const circleS = asset.circleS as Plane
-  const circleBBox = tool.getBBox3D(circle)
-  const circleSBBox = tool.getBBox3D(circleS)
+  const circleBBox = tool.getBBox3d(circle)
+  const circleSBBox = tool.getBBox3d(circleS)
 
   const circleMat = asset.circleMat as DefaultMaterial
   circleMat.opacity = Reactive.val(0.3)
@@ -24,7 +24,7 @@ export function runCircle(asset) {
 
   // 圓形 vs 圓形
   const userCircle = asset.userCircle as Plane
-  const userCircleBBox = tool.getBBox3D(userCircle)
+  const userCircleBBox = tool.getBBox3d(userCircle)
 
   const isOuterOut = circleInCircle(circleBBox, userCircleBBox).not()
   const isInnerIn = intersectCircle(circleSBBox, userCircleBBox)
@@ -67,15 +67,15 @@ function pointInCircle(circle: BoundingBox3D, point: PointSignal) {
   // Case 2, vecAB．vecAB <= r * r (圓心A, 點B)
   // https://gamedev.net/forums/topic/309663-2d-vector-intersection-with-circle-or-box/309663/
   const vecAB = point.sub(circle.pivot)
-  const radius = circle.right.sub(circle.pivot.x)
+  const radius = circle.sizeX.div(2)
   return vecAB.dot(vecAB).le(radius.mul(radius))
 }
 
 /** 目標 circle 是否在 collider 圓內 */
 function circleInCircle(colliderCircle: BoundingBox3D, circle: BoundingBox3D) {
   // 半徑
-  const r1 = colliderCircle.halfSizeX
-  const r2 = circle.halfSizeX
+  const r1 = colliderCircle.sizeX.div(2)
+  const r2 = circle.sizeX.div(2)
   // 圓心距離
   const squaredDistance = circle.pivot.sub(colliderCircle.pivot).magnitudeSquared()
 
@@ -85,8 +85,8 @@ function circleInCircle(colliderCircle: BoundingBox3D, circle: BoundingBox3D) {
 /** 兩圓是否相交(碰撞)，需為正圓 */
 function intersectCircle(colliderCircle: BoundingBox3D, circle: BoundingBox3D) {
   // 半徑
-  const r1 = colliderCircle.halfSizeX
-  const r2 = circle.halfSizeX
+  const r1 = colliderCircle.sizeX.div(2)
+  const r2 = circle.sizeX.div(2)
   // 圓心距離
   const squaredDistance = circle.pivot.sub(colliderCircle.pivot).magnitudeSquared()
 

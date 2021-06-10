@@ -7,14 +7,14 @@ import { tool } from './tool'
 
 export function runLeftRight(asset) {
   const user = asset.user as Plane
-  const userBBox = tool.getBBox3D(user)
+  const userBBox = tool.getBBox3d(user, { useRotation: true })
 
   const colliderMat = asset.colliderMat as DefaultMaterial
   colliderMat.opacity = Reactive.val(0.3)
 
   // 矩形
   const plane = asset.leftRight_plane as Plane
-  const planeBBox = tool.getBBox3D(plane)
+  const planeBBox = tool.getBBox3d(plane, { useRotation: true })
 
   checkHit3D(planeBBox, userBBox).monitor().subscribe(res => {
     const isHit = res.newValue

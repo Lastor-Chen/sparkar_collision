@@ -2,68 +2,72 @@ import Reactive from 'Reactive'
 
 export const tool = {
   /**
-   * 對 3D 物件生成 z 恆為 0 的 Bounding Box, 含旋轉
-   * - parent?: 計算父層 transform
+   * 對 3D 物件生成 z 恆為 0 的虛擬 Bounding Box
+   * ```
+   * config {
+   *   parent?: SceneObjectBase
+   *   useRotation?: boolean - default false
+   * }
+   * ```
    */
-  getBBox3D(obj: Plane, parent?: SceneObjectBase): BoundingBox3D {
-    const posX = parent ?
-      parent.transform.x.add(obj.transform.x.mul(parent.transform.scale.x)) :
-      obj.transform.x
-    const posY = parent ?
-      parent.transform.y.add(obj.transform.y.mul(parent.transform.scale.y)) :
-      obj.transform.y
+  getBBox3d(obj: Plane, config?: getBBox3dConfig): BoundingBox3D {
+    const parent = config && config.parent
+    const useRotation = config && config.useRotation
 
-    // Get the half size
-    const halfSizeX: ScalarSignal = parent ?
-      obj.width.mul(obj.transform.scale.x).mul(parent.transform.scale.x).div(2) :
-      obj.width.mul(obj.transform.scale.x).div(2)
-    const halfSizeY: ScalarSignal = parent ?
-      obj.height.mul(obj.transform.scale.y).mul(parent.transform.scale.y).div(2) :
-      obj.height.mul(obj.transform.scale.y).div(2)
+    // 計算中心
+    const pivot = parent ?
+      obj.transform.position.mul(parent.transform.scale).add(parent.transform.position) :
+      obj.transform.position
 
-    // Get origin point in the plane
-    const originPointLT = Reactive.point2d(posX.sub(halfSizeX), posY.add(halfSizeY))
-    const originPointRT = Reactive.point2d(posX.add(halfSizeX), posY.add(halfSizeY))
-    const originPointRB = Reactive.point2d(posX.add(halfSizeX), posY.sub(halfSizeY))
-    const originPointLB = Reactive.point2d(posX.sub(halfSizeX), posY.sub(halfSizeY))
-    const pivot = Reactive.point2d(posX, posY)
+    // 計算真實 size 寬高 (width, height 為單位寬高)
+    const sizeX = parent ?
+      obj.width.mul(obj.transform.scaleX).mul(parent.transform.scaleX) :
+      obj.width.mul(obj.transform.scaleX)
+    const sizeY = parent ?
+      obj.height.mul(obj.transform.scaleY).mul(parent.transform.scaleY) :
+      obj.height.mul(obj.transform.scaleY)
+
+    // 計算 4 個角之點位
+    const corners = [
+      // 順時針, 左下開始
+      Reactive.point(sizeX.div(2).neg(), sizeY.div(2).neg(), 0),
+      Reactive.point(sizeX.div(2).neg(), sizeY.div(2), 0),
+      Reactive.point(sizeX.div(2), sizeY.div(2), 0),
+      Reactive.point(sizeX.div(2), sizeY.div(2).neg(), 0),
+    ]
+
     const rotationZ = obj.transform.rotationZ
-
-    // Rotate the plane, then change to point3D
-    const pointLT = Reactive.pack2(tool.rotatePoint2D(originPointLT, pivot, rotationZ), 0)
-    const pointLB = Reactive.pack2(tool.rotatePoint2D(originPointLB, pivot, rotationZ), 0)
-    const pointRT = Reactive.pack2(tool.rotatePoint2D(originPointRT, pivot, rotationZ), 0)
-    const pointRB = Reactive.pack2(tool.rotatePoint2D(originPointRB, pivot, rotationZ), 0)
+    const vertices = corners.map(refPoint => {
+      const corner = pivot.add(refPoint)
+      return useRotation ? tool.rotatePointInXY(corner, pivot, rotationZ) : corner
+    })
 
     return {
-      pivot: Reactive.point(posX, posY, 0),
-      pointLT: pointLT,
-      pointRT: pointRT,
-      pointRB: pointRB,
-      pointLB: pointLB,
-      vertices: [pointLB, pointLT, pointRT, pointRB],
-      left: posX.sub(halfSizeX),
-      top: posY.add(halfSizeY),
-      right: posX.add(halfSizeX),
-      bottom: posY.sub(halfSizeY),
-      halfSizeX: halfSizeX,
-      halfSizeY: halfSizeY,
+      pivot: Reactive.point(pivot.x, pivot.y, 0),
+      vertices: vertices,
+      left: vertices[0].x,
+      top: vertices[1].y,
+      right: vertices[2].x,
+      bottom: vertices[3].y,
+      sizeX: sizeX,
+      sizeY: sizeY,
     }
   },
 
-  /** Rotate a point2D around center(0,0) */
-  rotatePoint2D(point2D: Point2DSignal, pivot: Point2DSignal, radians: ScalarSignal) {
-    const { x, y } = point2D
+  /** 在 xy 平面上, 以 pivot 為中心旋轉 point */
+  rotatePointInXY(point: PointSignal, pivot: PointSignal, radians: ScalarSignal) {
+    const { x, y } = point
     const { x: x0, y: y0 } = pivot
     const cos = Reactive.cos(radians)
     const sin = Reactive.sin(radians)
 
+    // 需先推回原點, 旋轉後再移回原位
     // x' = x * cos(θ) - y * sin(θ)
     // y' = x * sin(θ) + y * cos(θ)
-    // 先推回原點, 旋轉後再移回原位
-    return Reactive.point2d(
+    return Reactive.point(
       x.sub(x0).mul(cos).sub(y.sub(y0).mul(sin)).add(x0),
-      x.sub(x0).mul(sin).add(y.sub(y0).mul(cos)).add(y0)
+      x.sub(x0).mul(sin).add(y.sub(y0).mul(cos)).add(y0),
+      0
     )
   },
 
@@ -92,12 +96,12 @@ export const other = {
    * 點是否在矩形內(旋轉可), 內積法
    * - source - https://math.stackexchange.com/questions/190111/how-to-check-if-a-point-is-inside-a-rectangle
    */
-  pointInRectByDot(point: PointSignal, rectBBox: BoundingBox3D) {
+  pointInRectByDot(point: PointSignal, rect: BoundingBox3D) {
     // rect(A,B,C,D) 點位順時針 vs point(P)
     // 公式: (0 ≤ AP·AB ≤ AB·AB) and (0 ≤ AP·AD ≤ AD·AD)
-    const pointA = rectBBox.pointLT
-    const pointB = rectBBox.pointRT
-    const pointD = rectBBox.pointLB
+    const pointA = rect.vertices[0]
+    const pointB = rect.vertices[1]
+    const pointD = rect.vertices[3]
     const vecAB = pointB.sub(pointA)
     const vecAD = pointD.sub(pointA)
     const vecAP = point.sub(pointA)

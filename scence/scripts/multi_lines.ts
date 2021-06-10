@@ -7,7 +7,7 @@ import { tool } from './tool'
  */
 export function runMultiLines(asset) {
   const user = asset.user as Plane
-  const userBBox = tool.getBBox3D(user)
+  const userBBox = tool.getBBox3d(user, { useRotation: true })
 
   const colliderMat = asset.colliderMat as DefaultMaterial
   colliderMat.opacity = Reactive.val(0.3)

@@ -1,4 +1,7 @@
 # SparkAR 2D Collision Detection Demo in v114
+
+![demo_gif](demo.gif)
+
 使用 SparkAR 響應式 API 實作 2D 碰撞偵測
 
 ### module list

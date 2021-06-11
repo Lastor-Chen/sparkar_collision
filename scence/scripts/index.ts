@@ -4,9 +4,9 @@ import { runAABB } from './aabb'
 import { runPointInRect } from './point_in_rect'
 import { runLeftRight } from './left_right'
 import { runMultiLines } from './multi_lines'
-import { runCircle } from './circle'
-import { runGJK } from './gjk'
 import { runSAT } from './sat'
+import { runGJK } from './gjk'
+import { runCircle } from './circle'
 
 (async function () {
   const asset = await queryAsset()
@@ -20,15 +20,15 @@ import { runSAT } from './sat'
   // 凸四邊形碰撞 (可旋轉), 左右側判定法
   // runLeftRight(asset)
 
-  // 直線式道路, 左右側法之連續線段判定
+  // 直線式道路, 多線段左右側判定
   // runMultiLines(asset)
 
-  // 圓形-圓形 or 圓形-矩形, 半徑法
-  // runCircle(asset)
+  // 凸多邊形, SAT 分離軸定律
+  runSAT(asset)
 
   // (X) 凸多邊形, GJK 演算法, 運算成本過高, 會當掉
   // runGJK(asset)
 
-  // 凸多邊形, SAT 分離軸定律
-  runSAT(asset)
+  // 圓形-圓形 or 圓形-矩形, 半徑法
+  // runCircle(asset)
 })();

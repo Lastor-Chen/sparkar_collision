@@ -26,13 +26,13 @@ class Helper {
       const isPointIn = this.pointInRect(point, rectB)
       aInB = aInB ? aInB.or(isPointIn) : isPointIn
     })
-  
+
     let bInA: BoolSignal = null
     rectB.vertices.forEach(point => {
       const isPointIn = this.pointInRect(point, rectA)
       bInA = bInA ? bInA.or(isPointIn) : isPointIn
     })
-  
+
     return aInB.or(bInA)
   }
 
@@ -46,7 +46,7 @@ class Helper {
     const vecAB = pointB.sub(pointA)
     const vecAD = pointD.sub(pointA)
     const vecAP = point.sub(pointA)
-  
+
     // 公式: (0 ≤ AP·AB ≤ AB·AB) and (0 ≤ AP·AD ≤ AD·AD)
     const yIn = vecAP.dot(vecAB).ge(0).and(vecAP.dot(vecAB).le(vecAB.dot(vecAB)))
     const xIn = vecAP.dot(vecAD).ge(0).and(vecAP.dot(vecAD).le(vecAD.dot(vecAD)))

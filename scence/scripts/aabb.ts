@@ -2,6 +2,9 @@ import Reactive from 'Reactive'
 import Diagnostics from 'Diagnostics'
 import { tool } from './tool'
 
+// 說明
+// https://link.medium.com/sxBeXqKEZgb 
+
 export function runAABB(asset) {
   const user = asset.user as Plane
   const userBBox = tool.getBBox3d(user)

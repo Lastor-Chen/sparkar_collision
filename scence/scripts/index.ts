@@ -26,7 +26,7 @@ import { runSAT } from './sat'
   // 圓形-圓形 or 圓形-矩形, 半徑法
   // runCircle(asset)
 
-  // 凸多邊形, GJK 演算法, 運算成本過高, 會當掉
+  // (X) 凸多邊形, GJK 演算法, 運算成本過高, 會當掉
   // runGJK(asset)
 
   // 凸多邊形, SAT 分離軸定律

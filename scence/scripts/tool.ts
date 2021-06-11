@@ -1,4 +1,5 @@
 import Reactive from 'Reactive'
+import Diagnostics from 'Diagnostics'
 
 export const tool = {
   /**
@@ -39,7 +40,7 @@ export const tool = {
     const rotationZ = obj.transform.rotationZ
     const vertices = corners.map(refPoint => {
       const corner = pivot.add(refPoint)
-      return useRotation ? tool.rotatePointInXY(corner, pivot, rotationZ) : corner
+      return useRotation ? this.rotatePointInXY(corner, pivot, rotationZ) : corner
     })
 
     return {
@@ -87,6 +88,19 @@ export const tool = {
     } else {
       return radians.div(Math.PI).mul(180)
     }
+  },
+
+  /** 給 poly 添加 vertices 與 pivot 屬性 */
+  async setPolygon(polygon: Polygon) {
+    const polyTransform = polygon.transform
+    const vertices = await polygon.findByPath('*/vertex*')
+
+    // 計算 mesh 父層 position, scale
+    polygon.vertices = vertices.map(vertex => {
+      const point = vertex.transform.position
+      return point.mul(polyTransform.scale).add(polyTransform.position)
+    })
+    polygon.pivot = polyTransform.position
   },
 }
 

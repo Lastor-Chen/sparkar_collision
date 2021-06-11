@@ -17,8 +17,7 @@ interface BoundingBox3D {
   sizeY: ScalarSignal,
 }
 
-// GJK
-interface Trapezium extends ThreeDObject {
+interface Polygon extends ThreeDObject {
   pivot?: PointSignal,
   vertices?: PointSignal[],
 }

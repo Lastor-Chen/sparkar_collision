@@ -2,79 +2,90 @@ import Reactive from 'Reactive'
 import Diagnostics from 'Diagnostics'
 import { tool } from './tool'
 
-/**
- * 不實用, 需要特規去寫, 封口得另外處理
- */
-export function runMultiLines(asset) {
+/** 不實用, 需要特規去寫, 封口得另外處理 */
+export async function runMultiLines(asset) {
   const user = asset.user as Plane
   const userBBox = tool.getBBox3d(user, { useRotation: true })
 
   const colliderMat = asset.colliderMat as DefaultMaterial
   colliderMat.opacity = Reactive.val(0.3)
 
-  const vertices = asset.multiLines_vertices as SceneObject[]
+  // 設定 mesh
+  const uMesh = asset.multiLines_u_mesh as Polygon
+  await tool.setPolygon(uMesh)
+
+  // 分出外圈與內圈的點雲
+  const vertices = uMesh.vertices
   const outside = vertices.slice(0, vertices.length / 2)
   const inside = vertices.slice(vertices.length / 2)
 
-  const isOutsideIn = checkRectInLines(outside, userBBox)
-  const isInsideOut = checkRectOutLines(inside, userBBox)
-
+  // 偵測 user 是否跑出軌道
+  const isOutsideIn = Helper.checkRectInLines(outside, userBBox)
+  const isInsideOut = Helper.checkRectOutLines(inside, userBBox)
   isOutsideIn.and(isInsideOut).monitor().subscribe(res => {
     const isHit = res.newValue
     colliderMat.opacity = isHit ? Reactive.val(1) : Reactive.val(0.3)
   })
 }
 
-/** 檢查 rect 是否在外圈內部 */
-function checkRectInLines(outside: SceneObject[], role: BoundingBox3D) {
-  let isInside: BoolSignal = null
-  outside.forEach((_, index) => {
-    if (!outside[index + 1]) return void 0
-    const pointA = outside[index].transform.position
-    const pointB = outside[index + 1].transform.position
+class Helper {
+  /** 檢查 rect 是否在外圈內部 */
+  static checkRectInLines(outside: PointSignal[], role: BoundingBox3D) {
+    // 依序檢查外圈每一條 edge
+    let isInside: BoolSignal = null
+    outside.forEach((_, idx) => {
+      if (!outside[idx + 1]) return void 0
+      const pointA = outside[idx]
+      const pointB = outside[idx + 1]
 
-    const lt_line = calcWhichSide(pointA, pointB, role.vertices[0])
-    const lb_line = calcWhichSide(pointA, pointB, role.vertices[1])
-    const rt_line = calcWhichSide(pointA, pointB, role.vertices[2])
-    const rb_line = calcWhichSide(pointA, pointB, role.vertices[3])
-    const role_line = lt_line.le(0).and(lb_line.le(0)).and(rt_line.le(0)).and(rb_line.le(0))
-    isInside = isInside ? isInside.and(role_line) : role_line
-  })
+      // 檢查 role 各點是否在 lineAB 內側
+      let isInLine: BoolSignal = null
+      for (const point of role.vertices) {
+        const isRightSide = this.calcWhichSide(pointA, pointB, point).le(0)
+        isInLine = isInLine ? isInLine.and(isRightSide) : isRightSide
+      }
 
-  return isInside
-}
+      isInside = isInside ? isInside.and(isInLine) : isInLine
+    })
 
-/** 檢查 rect 是否在內圈外部 */
-function checkRectOutLines(inside: SceneObject[], role: BoundingBox3D) {
-  let isOutside: BoolSignal = null
-  inside.forEach((_, index) => {
-    if (!inside[index + 1]) return void 0
-    const pointA = inside[index].transform.position
-    const pointB = inside[index + 1].transform.position
+    return isInside
+  }
 
-    const lt_line = calcWhichSide(pointA, pointB, role.vertices[0])
-    const lb_line = calcWhichSide(pointA, pointB, role.vertices[1])
-    const rt_line = calcWhichSide(pointA, pointB, role.vertices[2])
-    const rb_line = calcWhichSide(pointA, pointB, role.vertices[3])
-    const role_line = lt_line.gt(0).and(lb_line.gt(0)).and(rt_line.gt(0)).and(rb_line.gt(0))
-    isOutside = isOutside ? isOutside.or(role_line) : role_line
-  })
+  /** 檢查 rect 是否在內圈外部 */
+  static checkRectOutLines(inside: PointSignal[], role: BoundingBox3D) {
+    // 依序檢查內圈每一條 edge
+    let isOutside: BoolSignal = null
+    inside.forEach((_, index) => {
+      if (!inside[index + 1]) return void 0
+      const pointA = inside[index]
+      const pointB = inside[index + 1]
 
-  return isOutside
-}
+      // 檢查 role 各點是否在 lineAB 外側
+      let isOutLine: BoolSignal = null
+      for (const point of role.vertices) {
+        const isLeftSide = this.calcWhichSide(pointA, pointB, point).gt(0)
+        isOutLine = isOutLine ? isOutLine.and(isLeftSide) : isLeftSide
+      }
+      isOutside = isOutside ? isOutside.or(isOutLine) : isOutLine
+    })
 
-/** 判斷 pointC 在 lineAB 的哪一側, 外積法 */
-function calcWhichSide(pointA: PointSignal, pointB: PointSignal, pointC: PointSignal) {
-  // 向量矩陣求外積 vecAB X vecAC
-  // [(xb-xa), (yb-ya)]
-  // [(xc-xa), (yc-ya)]
-  // cross = (xb - xa)*(yc - ya) - (yb - ya)*(xc - xa)
-  // 若 cross === 0 在線上, cross > 0 在左側, cross < 0 在右側
+    return isOutside
+  }
 
-  const vectorAB = pointB.sub(pointA)
-  const vectorAC = pointC.sub(pointA)
+  /**
+   * 判斷 pointC 在 lineAB 的哪一側, 外積法
+   * - result > 0 在左側
+   * - result < 0 在右側
+   * - result === 0 在線上
+   */
+  static calcWhichSide(pointA: PointSignal, pointB: PointSignal, pointC: PointSignal) {
+    // 向量矩陣求外積 vecAB X vecAC
+    // cross = (xb - xa)*(yc - ya) - (yb - ya)*(xc - xa)
+    const vectorAB = pointB.sub(pointA)
+    const vectorAC = pointC.sub(pointA)
 
-  // 外積求到的是法線向量, 由於計算用的兩向量在 xy 平面, 故此法向量必為 (0, 0, z)
-  // 取得 z 可得外積的純量
-  return vectorAB.cross(vectorAC).z
+    // 外積求到的是法線向量, 由於計算用的兩向量在 xy 平面, 故法向量必為 (0, 0, z)
+    // 取得 z 可得外積的純量
+    return vectorAB.cross(vectorAC).z
+  }
 }

@@ -16,88 +16,92 @@ export async function runSAT(asset) {
   const user = asset.user as Plane
   const userBBox = tool.getBBox3d(user, { useRotation: true })
 
-  const plane = asset.sat_plane as Plane
-  const planeBBox = tool.getBBox3d(plane, { useRotation: true })
-
   const colliderMat = asset.colliderMat as DefaultMaterial
   colliderMat.opacity = Reactive.val(0.3)
 
-  checkSAT(planeBBox, userBBox).monitor().subscribe(res => {
+  // 凸多邊形
+  const polygon = asset.n_poly as Polygon
+  await tool.setPolygon(polygon)
+
+  Helper.checkSAT(polygon, userBBox).monitor().subscribe(res => {
     const isSeparated = res.newValue
     colliderMat.opacity = isSeparated ? Reactive.val(0.3) : Reactive.val(1)
   })
 }
 
-/** 碰撞偵測, SAT */
-function checkSAT(rectA: BoundingBox3D, rectB: BoundingBox3D) {
-  // 取得參考軸
-  const normalsA = getRectNormals(rectA)
-  const normalsB = getRectNormals(rectB)
+class Helper {
+  /** 碰撞偵測, SAT */
+  static checkSAT(shapeA: BoundingBox3D | Polygon, shapeB: BoundingBox3D | Polygon) {
+    // 取得 shape 上的所有參考軸
+    const normalsA = this.getEdgeNormals(shapeA)
+    const normalsB = this.getEdgeNormals(shapeB)
 
-  // 找出分離軸, 如存在表示無發生碰撞
-  let hasSA: BoolSignal = null
-  normalsA.forEach((axis) => {
+    // 檢測參考軸中是否存在分離軸, 如存在表示無碰撞 (矩形情況, 僅需檢查兩軸)
+    let hasSA: BoolSignal = null
+    for (let idx = 0; idx < normalsA.length; idx++) {
+      const isSeparated = this.checkIsSeparated(shapeA, shapeB, normalsA[idx])
+      hasSA = hasSA ? hasSA.or(isSeparated) : isSeparated
+    }
+
+    let hasSA2: BoolSignal = null
+    for (let idx = 0; idx < normalsB.length; idx++) {
+      const isSeparated = this.checkIsSeparated(shapeA, shapeB, normalsB[idx])
+      hasSA2 = hasSA2 ? hasSA2.or(isSeparated) : isSeparated
+    }
+
+    return hasSA.or(hasSA2)
+  }
+
+  /** 找出各 edge 的 normals 作為參考軸 */
+  static getEdgeNormals(shape: BoundingBox3D | Polygon) {
+    const vertices = shape.vertices
+    return vertices.map((point, idx) => {
+      const nextPoint = vertices[idx + 1] || vertices[0]
+      const vec = nextPoint.sub(point)
+      return this.getVec2LeftNormal(vec)
+    })
+  }
+
+  /** 判斷 axis 是否為 shapeA 與 shapeB 的分離軸 */
+  static checkIsSeparated(shapeA: BoundingBox3D | Polygon, shapeB: BoundingBox3D | Polygon, axis: PointSignal) {
     // 取得最大最小投影長
-    const { min: aMin, max: aMax } = getMaxMin(rectA, axis)
-    const { min: bMin, max: bMax } = getMaxMin(rectB, axis)
+    const { min: aMin, max: aMax } = this.getMaxMin(shapeA, axis)
+    const { min: bMin, max: bMax } = this.getMaxMin(shapeB, axis)
 
     // A.max < B.min || B.max < A.min
-    const isSeparated = aMax.lt(bMin).or(bMax.lt(aMin))
-    hasSA = hasSA ? hasSA.or(isSeparated) : isSeparated
-  })
+    return aMax.lt(bMin).or(bMax.lt(aMin))
+  }
 
-  let hasSA2: BoolSignal = null
-  normalsB.forEach((axis) => {
-    // 取得最大最小投影長
-    const { min: aMin, max: aMax } = getMaxMin(rectA, axis)
-    const { min: bMin, max: bMax } = getMaxMin(rectB, axis)
+  /** 計算 shape 在分離軸上之最大, 最小投影 */
+  static getMaxMin(shape: BoundingBox3D | Polygon, axis: PointSignal) {
+    // 取得 4 個角
+    const vertices = shape.vertices;
 
-    // A.max < B.min || B.max < A.min
-    const isSeparated = aMax.lt(bMin).or(bMax.lt(aMin))
-    hasSA2 = hasSA2 ? hasSA2.or(isSeparated) : isSeparated
-  })
+    let max: ScalarSignal = null
+    let min: ScalarSignal = null
+    vertices.forEach(point => {
+      const length = this.getProjectLength(point, axis)
+      max = max ? Reactive.max(max, length) : length
+      min = min ? Reactive.min(min, length) : length
+    })
 
-  return hasSA.or(hasSA2)
-}
+    return { min, max }
+  }
 
-/** 計算 rect 在分離軸上之最大, 最小投影 */
-function getMaxMin(rect: BoundingBox3D, axis: PointSignal) {
-  // 取得 4 個角
-  const vertices = rect.vertices;
+  /** 取得 vecA 在 vecB 上的投影長 */
+  static getProjectLength(vecA: PointSignal, vecB: PointSignal) {
+    const dotAB = vecA.dot(vecB)
+    const bLength = vecB.magnitude()
+    return dotAB.div(bLength)
+  }
 
-  let max: ScalarSignal = null
-  let min: ScalarSignal = null
-  vertices.forEach(point => {
-    const length = getProjectLength(point, axis)
-    max = max ? Reactive.max(max, length) : length
-    min = min ? Reactive.min(min, length) : length
-  })
+  /** 回傳輸入向量的左側法向量, z = 0 */
+  static getVec2LeftNormal(vector: PointSignal | Point2DSignal) {
+    return Reactive.point(vector.y.neg(), vector.x, 0)
+  }
 
-  return { min, max }
-}
-
-/** 取得 vecA 在 vecB 上的投影長 */
-function getProjectLength(vecA: PointSignal, vecB: PointSignal) {
-  const dotAB = vecA.dot(vecB)
-  const bLength = vecB.magnitude()
-  return dotAB.div(bLength)
-}
-
-function getRectNormals(rect: BoundingBox3D) {
-  const vertices = rect.vertices
-  return vertices.map((point, idx) => {
-    const nextPoint = vertices[idx + 1] || vertices[0]
-    const vec = nextPoint.sub(point)
-    return getVec2LeftNormal(vec)
-  })
-}
-
-/** 回傳輸入向量的左側法向量, z = 0 */
-function getVec2LeftNormal(vector: PointSignal | Point2DSignal) {
-  return Reactive.point(vector.y.neg(), vector.x, 0)
-}
-
-/** 回傳輸入向量的右側法向量, z = 0 */
-function getVec2RightNormal(vector: PointSignal | Point2DSignal) {
-  return Reactive.point(vector.y, vector.x.neg(), 0)
+  /** 回傳輸入向量的右側法向量, z = 0 */
+  static getVec2RightNormal(vector: PointSignal | Point2DSignal) {
+    return Reactive.point(vector.y, vector.x.neg(), 0)
+  }
 }

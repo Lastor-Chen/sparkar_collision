@@ -21,38 +21,50 @@ export async function runGJK(asset) {
   colliderMat.opacity = Reactive.val(1)
 
   // 凸四邊形
-  const trapezium = asset.gjk_trapezium as Trapezium
-  const vertices = await trapezium.findByPath('rect0/vertex*')
+  const trapezium = asset.gjk_trapezium as Polygon
+  await tool.setPolygon(trapezium)
 
-  // 計算父層 position, scale
-  trapezium.vertices = vertices.map(vertex =>
-    vertex.transform.position.mul(trapezium.transform.scale).add(trapezium.transform.position)
-  )
-  trapezium.pivot = trapezium.transform.position
-
-  const fps = 6
+  // 設置 callback per frame
+  const fps = 2
   Time.setInterval(() => {
-    const isHit = checkGJK(userBBox, trapezium)
-
+    const isHit = Helper.checkGJK(userBBox, trapezium)
     // 變材質球會當掉, 改用文字顯示
     status.text = isHit ? Reactive.val('true') : Reactive.val('false')
   }, 1000 / fps)
 }
 
-function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium) {
-  const vertices: PointSignal[] = []
-  let direction: PointSignal = null
-  while (true) {
-    switch (vertices.length) {
-      case 0: { // 先根據兩者的 center 向量方向, 找第一個 SP
-        direction = shapeB.pivot.sub(shapeA.pivot) as unknown as PointSignal
-        break
-      }
-      case 1: { // 以顛倒的 center 向量, 找第二點
+class Helper {
+  /** 碰撞偵測, GJK */
+  static checkGJK(shapeA: BoundingBox3D | Polygon, shapeB: BoundingBox3D | Polygon) {
+    /** Simplex 上的頂點們 */
+    const vertices: PointSignal[] = []
+    let direction: PointSignal = null
+
+    /** 找出 Minkowski Difference 在該方向上的最遠點, 紀錄該點, 並回傳是否同方向 */
+    const addSupportPoint = () => {
+      const directionNeg = direction.neg() as unknown as PointSignal
+
+      // Simplex 在該方向上的最遠點為 sp = shapeA.sp - shapeB.sp.逆向
+      const spA = this.getSupportPoint(shapeA, direction)
+      const spB = this.getSupportPoint(shapeB, directionNeg)
+      const sp = spA.sub(spB)
+
+      vertices.push(sp)
+      return direction.dot(sp).pinLastValue() >= 0
+    }
+
+    // 遍歷找出兩 shape 在 Minkowski Difference 上面的 Simplex
+    // 如該 Simplex 包含空間原點, 表示發生碰撞
+    let result = false
+    while (true) {
+      if (vertices.length === 0) {
+        // 先根據兩者的 center 向量方向, 找第一個 SP
+        direction = shapeB.pivot.sub(shapeA.pivot).pinLastValue() as unknown as PointSignal
+      } else if (vertices.length === 1) {
+        // 以顛倒的 center 向量, 找第二點
         direction = direction.mul(-1) as unknown as PointSignal
-        break
-      }
-      case 2: { // 利用上面兩點 spA, spB 之法向量方向, 找第三點
+      } else if (vertices.length === 2) {
+        // 利用上面兩點 spA, spB 之法向量方向, 找第三點
         const spB = vertices[1]
         const spC = vertices[0]
 
@@ -60,13 +72,12 @@ function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium) {
         const vecC0 = Reactive.point(0, 0, 0).sub(spC)
 
         direction = vecCB.cross(vecC0).cross(vecCB)
-        break
-      }
-      case 3: { // 判斷三點區域, 是否包含原點
+      } else if (vertices.length === 3) {
+        // 判斷三點區域, 是否包含原點
         const spA = vertices[2]
         const spB = vertices[1]
         const spC = vertices[0]
-        
+
         const vecA0 = Reactive.point(0, 0, 0).sub(spA)
         const vecAB = spB.sub(spA)
         const vecAC = spC.sub(spA)
@@ -83,39 +94,33 @@ function checkGJK(shapeA: BoundingBox3D, shapeB: BoundingBox3D | Trapezium) {
           vertices.splice(2, 1)
           direction = acPerp
         } else {
-          return true
+          result = true
+          break
         }
-        break
       }
+
+      const isSameDir = addSupportPoint()
+      if (!isSameDir) break
     }
 
-    if (!addSupportPoint(direction)) return false
+    return result
   }
 
-  function addSupportPoint(direction: PointSignal) {
-    const directionNeg = direction.neg() as unknown as PointSignal
+  /** 取得 shape 在給定方向上最遠的 point */
+  static getSupportPoint(shape: BoundingBox3D | Polygon, direction: PointSignal): PointSignal {
+    // 用負無限大, 因下方比大小時, distance 有可能負數
+    let furthestDistance = -Infinity
+    let furthestPoint: PointSignal = null
 
-    const sp = getSupportPoint(shapeA, direction).sub(getSupportPoint(shapeB, directionNeg))
-    vertices.push(sp)
+    shape.vertices.forEach(point => {
+      const distance = point.dot(direction).pinLastValue()
 
-    return direction.dot(sp).pinLastValue() >= 0
+      if (distance > furthestDistance) {
+        furthestDistance = distance
+        furthestPoint = point.pinLastValue()
+      }
+    })
+
+    return furthestPoint
   }
-}
-
-/** 求 shape 在在方向上最遠的 point */
-function getSupportPoint(shape: BoundingBox3D | Trapezium, direction: PointSignal): PointSignal {
-  // 用負無限大, 因下方比大小時, distance 有可能負數
-  let furthestDistance = -Infinity
-  let furthestPoint: PointSignal = null
-
-  shape.vertices.forEach(point => {
-    const distance = point.dot(direction).pinLastValue()
-
-    if (distance > furthestDistance) {
-      furthestDistance = distance
-      furthestPoint = point
-    }
-  })
-
-  return furthestPoint
 }

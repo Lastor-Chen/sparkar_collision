@@ -1,7 +1,7 @@
 import Reactive from 'Reactive'
 import Diagnostics from 'Diagnostics'
 
-export const tool = {
+const utils = {
   /**
    * 對 3D 物件生成 z 恆為 0 的虛擬 Bounding Box
    * ```
@@ -103,6 +103,17 @@ export const tool = {
     polygon.pivot = polyTransform.position
   },
 }
+
+// Object method  overloading
+type Tool = typeof utils
+interface ToolModule extends Tool {
+  toRadians(degrees: number): number;
+  toRadians(degrees: ScalarSignal): ScalarSignal;
+  toDegrees(degrees: number): number;
+  toDegrees(degrees: ScalarSignal): ScalarSignal;
+}
+
+export const tool = utils as ToolModule
 
 /** 其他未使用到的向量幾何函式 */
 export const other = {
